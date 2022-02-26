@@ -1,0 +1,23 @@
+[package]
+name = "ui_setup"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+# Turn on the symbols on the release build if you are profiling the app
+[profile.release]
+debug = false
+
+[dependencies]
+rand = "0.8.4"
+
+[dependencies.sdl2]
+version = "0.35.2"
+default-features = false
+features = ["ttf", "image", "gfx", "static-link","use-vcpkg"]
+
+[package.metadata.vcpkg]
+dependencies = ["sdl2", "sdl2-image[tiff]", "sdl2-ttf", "sdl2-gfx"]
+git = "https://github.com/microsoft/vcpkg"
+rev = "261c458af6e3eed5d099144aff95d2b5035f656b"
