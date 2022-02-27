@@ -11,6 +11,7 @@ debug = false
 
 [dependencies]
 rand = "0.8.4"
+uuid = {version = "0.8.2", features = ["serde", "v4"]}
 
 [dependencies.sdl2]
 version = "0.35.2"

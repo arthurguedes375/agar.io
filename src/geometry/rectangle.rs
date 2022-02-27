@@ -1,4 +1,4 @@
-use super::Position;
+use super::{Position};
 
 pub struct RectangleCornersPositions {
     pub top_left: Position,
@@ -90,6 +90,44 @@ impl Rectangle {
         }
 
         return false;
+    }
+
+    pub fn closest_position_within(&self, position: Position) -> Position {
+        let corners = self.get_corners();
+
+        let closest_positions: [Position; 4] = [
+            Position { // Top Left
+                x: position.x.clamp(corners.top_left.x, corners.top_right.x),
+                y: corners.top_left.y,
+            },
+            Position { // Top Right
+                x: corners.top_right.x,
+                y: position.y.clamp(corners.top_right.y, corners.bottom_right.y),
+            },
+            Position { // Bottom Right
+                x: position.x.clamp(corners.bottom_left.x, corners.bottom_right.x),
+                y: corners.bottom_right.y,
+            },
+            Position { // Bottom Left
+                x: corners.bottom_left.x,
+                y: position.y.clamp(corners.top_left.y, corners.bottom_left.y),
+            },
+        ];
+
+        let distances: Vec<u32> = closest_positions
+            .iter()
+            .map(|pos| pos.get_distance(position))
+            .collect();
+
+        let mut closest_distance = (0, distances[0]);
+
+        for (distance_i, distance) in distances.iter().enumerate() {
+            if *distance < closest_distance.1 {
+                closest_distance = (distance_i, *distance);
+            }
+        }
+
+        return closest_positions[closest_distance.0];
     }
 
 }

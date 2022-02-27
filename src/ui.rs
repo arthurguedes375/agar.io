@@ -6,6 +6,9 @@ use sdl2::image::{InitFlag};
 use sdl2::pixels::Color;
 use sdl2::render::Texture;
 
+use sdl2::event::{Event, WindowEvent};
+use sdl2::keyboard::Keycode;
+
 use sdl2::gfx::primitives::DrawRenderer;
 
 use sdl2::rect::Rect;
@@ -16,8 +19,12 @@ use std::path::Path;
 
 use crate::helper::{G2UMessage, U2GMessage};
 use crate::settings;
-use crate::geometry::{Position, rectangle::{Rectangle}};
+use crate::geometry;
+use geometry::{Position, rectangle::{Rectangle, Size, RectangleSize}, circle::Circle};
 use crate::game;
+
+use game::map::MapView;
+use game::player::Player;
 
 use game::{Game};
 
@@ -29,21 +36,34 @@ pub struct UiSettings {
     pub height: u32,
 }
 
+#[derive(Clone)]
+pub struct DebugOptions {
+    pub game_state: bool,
+    pub map_view: bool,
+}
+
 pub struct Ui {
     pub sdl_context: Sdl,
     pub video_subsystem: VideoSubsystem,
     pub canvas: Canvas<Window>,
     pub event_pump: EventPump,
+    pub map_view: MapView,
+    pub player_name: String,
+    pub player_id: Option<String>,
+    pub debug_options: DebugOptions,
+    pub debugging: bool,
 }
 
 impl Ui {
-    pub fn new(ui_settings: UiSettings) -> Ui {
+    pub fn new(player_name: &str, ui_settings: UiSettings) -> Ui {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
         let _image_context = sdl2::image::init(InitFlag::PNG);
 
         let window = video_subsystem
             .window(&ui_settings.title, ui_settings.width, ui_settings.height)
+            .opengl()
+            .resizable()
             .position_centered()
             .build()
             .unwrap();
@@ -52,26 +72,61 @@ impl Ui {
 
         let event_pump = sdl_context.event_pump().unwrap();
 
+        let map_view = MapView {
+            position: Position {
+                x: settings::MAP_WIDTH as i32 / 2,
+                y: settings::MAP_HEIGHT as i32 / 2,
+            },
+            size: Size::Rectangle(RectangleSize {
+                width: settings::WINDOW_WIDTH,
+                height: settings::WINDOW_HEIGHT,
+            }),
+        };
+
         Ui {
             sdl_context,
             video_subsystem,
             canvas,
             event_pump,
+            map_view,
+
+            player_name: player_name.to_string(),
+            player_id: None,
+
+            debug_options: settings::DEFAULT_DEBUG_OPTIONS,
+            debugging: settings::DEFAULT_DEBUGGING_STATE,
         }
     }
 
     fn inputs(&mut self, tx: &Sender<U2GMessage>) {
+        let mut events = vec![];
         for event in self.event_pump.poll_iter() {
             match event {
+                Event::Window {
+                    win_event: WindowEvent::Resized(width, height),
+                    ..
+                } => {
+                    self.map_view.size =   Size::Rectangle(RectangleSize {
+                            width: width as u32,
+                            height: height as u32,
+                        }
+                    );
+                }
+
                 sdl2::event::Event::Quit {
                     ..
                 } => {
                     tx.send(U2GMessage::Quit).unwrap();
                 }
                 _ => {
+                    events.push(event.clone());
                     tx.send(U2GMessage::Event(event)).unwrap();
                 }
             }
+        }
+
+        for event in events {
+            self.debug_events(&event);
         }
     }
 
@@ -143,20 +198,87 @@ impl Ui {
         self.canvas.clear();
     }
 
-    fn draw(&mut self) {
-        DrawRenderer::aa_trigon(
-            &self.canvas,
-            self.event_pump.mouse_state().x() as i16, 
-            self.event_pump.mouse_state().y() as i16,
-            settings::WINDOW_WIDTH as i16 / 2 ,
-            settings::WINDOW_HEIGHT as i16 / 2,
-            self.event_pump.mouse_state().x() as i16,
-            settings::WINDOW_HEIGHT as i16 / 2,
-            Color::CYAN
-        ).unwrap();
+    fn circle(&mut self, circle: geometry::circle::Circle, color: Color, filled: bool) {
+        if filled {
+            DrawRenderer::filled_circle(
+                &self.canvas,
+                circle.center.x as i16,
+                circle.center.y as i16,
+                circle.radius as i16,
+                color,
+            ).unwrap();
+        } else {
+            DrawRenderer::aa_circle(
+                &self.canvas,
+                circle.center.x as i16,
+                circle.center.y as i16,
+                circle.radius as i16,
+                color,
+            ).unwrap();
+        }
+    }
+
+    fn draw_fruits(&mut self, game: &mut game::Game) {
+        let fruits = self.map_view.get_visible_fruits(&game.map);
+        
+        for fruit in fruits {
+            self.circle(fruit, Color::CYAN, true);
+        }
+    }
+
+    fn draw_player(
+        &mut self,
+        game: &mut game::Game,
+        font: &Font,
+        texture_creator: &TextureCreator,
+    ) {
+        let player = match Player::get(self.player_id.clone(), game) {
+            Some(player) => player,
+            None => return,
+        };
+        let body_parts = player.body_parts.clone();
+        for body_part in body_parts {
+            self.circle(
+                Circle {
+                    center: self.map_view.map_position(body_part.center),
+                    ..body_part
+                },
+                Color::RGB(255, 77, 0),
+                true,
+            );
+            
+
+            self.write_text(
+                &player.name,
+                Color::WHITE,
+                Position {
+                    x: body_part.center.x - body_part.radius as i32,
+                    y: body_part.center.y - body_part.radius as i32 - 25,
+                },
+                font,
+                texture_creator,
+                None)
+        }
+    }
+
+    fn draw(
+        &mut self,
+        game: &mut game::Game,
+        font: &Font,
+        texture_creator: &TextureCreator,
+    ) {
+        self.draw_fruits(game);
+        self.draw_player(game, font, texture_creator);
     }
 
     pub fn run(&mut self, tx: &Sender<U2GMessage>, rx: &Receiver<G2UMessage>) {
+        let mut rng = rand::thread_rng();
+        if let None = self.player_id {
+            let player = Player::new(&self.player_name, &mut rng);
+            self.player_id = Some(player.id.clone());
+            player.connect(&tx);
+        }
+
         let ttf_context = sdl2::ttf::init().unwrap();
         let texture_creator = self.canvas.texture_creator();
 
@@ -172,17 +294,35 @@ impl Ui {
         ).unwrap();
         debug_font.set_style(sdl2::ttf::FontStyle::NORMAL);
 
+        // Load Game font
+        let mut game_font = ttf_context.load_font(
+            Path::new(settings::GAME_FONT_PATH),
+            settings::GAME_FONT_POINT_SIZE
+        ).unwrap();
+        game_font.set_style(sdl2::ttf::FontStyle::NORMAL);
+
+        
         for message in rx.iter() {
             self.inputs(tx);
-
+            
             let G2UMessage::StateUpdate(mut game) = message;
             let game = &mut game;
 
+            let player_pos = match Player::get(self.player_id.clone(), game) {
+                Some(player) => player.body_parts[0].center,
+                None => Position {
+                    x: settings::MAP_WIDTH as i32 / 2,
+                    y: settings::MAP_HEIGHT as i32 / 2,
+                }
+            };
+
+            self.map_view.position = player_pos;
+
             self.draw_background();
 
-            self.draw();
+            self.draw(game, &game_font, &texture_creator);
 
-            if game.debugging {
+            if self.debugging {
                 self.debug(
                     game,
                     &debug_font,
@@ -195,20 +335,47 @@ impl Ui {
         }
     }
 
+    pub fn debug_events(&mut self, event: &Event) {
+        match event {
+            Event::KeyDown {
+                keycode: Some(Keycode::F5),
+                ..
+            } => {
+                self.debugging = !self.debugging; 
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::F6),
+                ..
+            } => {
+                self.debug_options = DebugOptions {
+                    game_state: !self.debug_options.game_state,
+                    ..self.debug_options
+                }
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::F7),
+                ..
+            } => {
+                self.debug_options = DebugOptions {
+                    map_view: !self.debug_options.map_view,
+                    ..self.debug_options
+                }
+            }
+
+            _ => {}
+        }
+    }
+
     pub fn debug(
         &mut self,
         game: &mut Game,
         debug_font: &Font,
         texture_creator: &TextureCreator,
     ) {
-        if game.debug_options.game_state {
+        if self.debug_options.game_state {
             let fps = game.fps;
 
-            let info_text = format!(
-"FPS: {fps}",
-fps=fps,
-);
-
+            let info_text = format!("FPS: {fps}");
             self.write_text(
                 &info_text,
                 settings::DEBUG_COLOR,
@@ -220,6 +387,22 @@ fps=fps,
                 texture_creator,
                 None,
             );
+        }
+
+        if self.debug_options.map_view {
+            self.canvas.set_draw_color(Color::GREEN);
+            let size = Rectangle::to_rectangle_size(self.map_view.size.clone());
+            let pos = self.map_view.map_position(self.map_view.position);
+            self.canvas.draw_rect(
+                sdl2::rect::Rect::from_center(
+                    sdl2::rect::Point::from((
+                        pos.x,
+                        pos.y,
+                    )),
+                    size.width - 5,
+                    size.height - 5,
+                )
+            ).unwrap();
         }
     }
 }

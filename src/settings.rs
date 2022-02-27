@@ -1,11 +1,11 @@
 use sdl2::pixels::Color;
 
-use crate::game::DebugOptions;
+use crate::ui::DebugOptions;
 
 // Window
 pub const WINDOW_TITLE: &str = "";
-pub const WINDOW_WIDTH: u32 = 600;
-pub const WINDOW_HEIGHT: u32 = 600;
+pub const WINDOW_WIDTH: u32 = 1200;
+pub const WINDOW_HEIGHT: u32 = 1200;
 pub const MAX_FPS: u16 = 300;
 
 // Sprites
@@ -18,4 +18,20 @@ pub const DEBUG_FONT_POINT_SIZE: u16 = 15;
 pub const DEBUG_COLOR: Color = Color::MAGENTA;
 pub const DEFAULT_DEBUG_OPTIONS: DebugOptions = DebugOptions {
     game_state: true,
+    map_view: true,
 };
+
+// Font
+pub const GAME_FONT_PATH: &str = "./assets/fonts/game.ttf";
+pub const GAME_FONT_POINT_SIZE: u16 = 15;
+
+// Map
+pub const MAP_WIDTH: u32 = 6000;
+pub const MAP_HEIGHT: u32 = 6000;
+
+// Player
+pub const INITIAL_PLAYER_SCORE: u32 = 20;
+
+// Fruits
+pub const FRUITS: u16 = 2000;
+pub const FRUIT_RADIUS: u32 = 10;

@@ -7,6 +7,15 @@ use crate::settings;
 use crate::helper::{G2UMessage, U2GMessage};
 
 
+// Mods
+pub mod map;
+pub mod player;
+pub mod fruit;
+pub mod obstacle;
+
+
+use map::Map;
+
 #[derive(Clone)]
 pub enum Status {
     Running,
@@ -15,27 +24,20 @@ pub enum Status {
 }
 
 #[derive(Clone)]
-pub struct DebugOptions {
-    pub game_state: bool,
-}
-
-#[derive(Clone)]
 pub struct Game {
+    pub map: Map,
     pub status: Status,
     pub last_frame_timestamp: u128,
     pub fps: u16,
-    pub debug_options: DebugOptions,
-    pub debugging: bool,
 }
 
 impl Game {
     pub fn new() -> Game {
         return Game {
+            map: Map::new(),
             status: Status::Running,
             last_frame_timestamp: time::now(),
             fps: 0,
-            debug_options: settings::DEFAULT_DEBUG_OPTIONS,
-            debugging: settings::DEFAULT_DEBUGGING_STATE,
         };
     }
 
@@ -58,6 +60,9 @@ impl Game {
 
         for message in rx_message {
             match message {
+                U2GMessage::NewPlayer(player) => {
+                    self.map.players.insert(player.id.clone(), player);
+                }
                 U2GMessage::Event(event) => {
                     match event {
         
@@ -70,22 +75,6 @@ impl Game {
                                 Status::Paused => self.status = Status::Running,
         
                                 _ => {}
-                            }
-                        }
-        
-                        Event::KeyDown {
-                            keycode: Some(Keycode::F5),
-                            ..
-                        } => {
-                            self.debugging = !self.debugging; 
-                        }
-                        Event::KeyDown {
-                            keycode: Some(Keycode::F6),
-                            ..
-                        } => {
-                            self.debug_options = DebugOptions {
-                                game_state: !self.debug_options.game_state,
-                                ..self.debug_options
                             }
                         }
 
