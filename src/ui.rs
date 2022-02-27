@@ -238,11 +238,12 @@ impl Ui {
         };
         let body_parts = player.body_parts.clone();
         for body_part in body_parts {
+            let mapped = Circle {
+                center: self.map_view.map_position(body_part.center),
+                ..body_part
+            };
             self.circle(
-                Circle {
-                    center: self.map_view.map_position(body_part.center),
-                    ..body_part
-                },
+                mapped,
                 Color::RGB(255, 77, 0),
                 true,
             );
@@ -252,8 +253,8 @@ impl Ui {
                 &player.name,
                 Color::WHITE,
                 Position {
-                    x: body_part.center.x - body_part.radius as i32,
-                    y: body_part.center.y - body_part.radius as i32 - 25,
+                    x: mapped.center.x - body_part.radius as i32,
+                    y: mapped.center.y - body_part.radius as i32 - 25,
                 },
                 font,
                 texture_creator,
