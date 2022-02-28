@@ -47,20 +47,20 @@ impl Rectangle {
         let size = Rectangle::to_rectangle_size(self.size.clone());
         let corners = RectangleCornersPositions {
             top_left: Position {
-                x: self.position.x - size.width as i32 / 2,
-                y: self.position.y - size.height as i32 / 2,
+                x: self.position.x - size.width as f32 / 2.0,
+                y: self.position.y - size.height as f32 / 2.0,
             },
             top_right: Position {
-                x: self.position.x + size.width as i32 / 2,
-                y: self.position.y - size.height as i32 / 2,
+                x: self.position.x + size.width as f32 / 2.0,
+                y: self.position.y - size.height as f32 / 2.0,
             },
             bottom_left: Position {
-                x: self.position.x - size.width as i32 / 2,
-                y: self.position.y + size.height as i32 / 2,
+                x: self.position.x - size.width as f32 / 2.0,
+                y: self.position.y + size.height as f32 / 2.0,
             },
             bottom_right: Position {
-                x: self.position.x + size.width as i32 / 2,
-                y: self.position.y + size.height as i32 / 2,
+                x: self.position.x + size.width as f32 / 2.0,
+                y: self.position.y + size.height as f32 / 2.0,
             },
         };
         
@@ -114,7 +114,7 @@ impl Rectangle {
             },
         ];
 
-        let distances: Vec<u32> = closest_positions
+        let distances: Vec<f32> = closest_positions
             .iter()
             .map(|pos| pos.get_distance(position))
             .collect();

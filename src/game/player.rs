@@ -12,6 +12,7 @@ use crate::settings;
 pub struct Player {
     pub body_parts: Vec<Circle>,
     pub name: String,
+    pub direction: Position,
     pub id: String,
 }
 
@@ -21,8 +22,8 @@ impl Player {
         let body_parts = vec![
             Circle {
                 center: Position {
-                    x: rng.gen_range(0..settings::MAP_WIDTH) as i32,
-                    y: rng.gen_range(0..settings::MAP_HEIGHT) as i32,
+                    x: rng.gen_range(0..settings::MAP_WIDTH) as f32,
+                    y: rng.gen_range(0..settings::MAP_HEIGHT) as f32,
                 },
                 radius: settings::INITIAL_PLAYER_SCORE,
             }
@@ -31,6 +32,10 @@ impl Player {
         let player = Player {
             id: id.clone(),
             body_parts,
+            direction: Position {
+                x: 0.0,
+                y: 0.0,
+            },
             name: name.to_string(),
         };
         

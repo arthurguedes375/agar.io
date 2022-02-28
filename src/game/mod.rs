@@ -1,11 +1,9 @@
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
 use std::sync::mpsc::{Sender, Receiver};
 
 use crate::time;
 use crate::settings;
-use crate::helper::{G2UMessage, U2GMessage};
-
+use crate::helper::{G2UMessage, U2GMessage, PlayerEvent};
+use crate::geometry::{Position};
 
 // Mods
 pub mod map;
@@ -46,14 +44,35 @@ impl Game {
         self.last_frame_timestamp = time::now();
     }
 
+    fn moving(&mut self, player_id: String, direction: Position) {
+        let mut player = player::Player::get(Some(player_id.clone()), self).unwrap();
+
+        player.direction = direction;
+
+        *self.map.players.get_mut(&player_id).unwrap() = player;
+    }
+
+    fn move_players(&mut self) {
+        let players = self.map.players.values_mut();
+
+        for player in players {
+            for body_part in player.body_parts.iter_mut() {
+                body_part.center.x += player.direction.x;
+                body_part.center.y += player.direction.y;
+            }
+        }
+    }
+
     fn update(&mut self) {
-        
+        self.move_players();
     }
 
     pub fn get_fps(last_frame_timestamp: u128) -> u16 {
         let fps = (1_000_000_000 / (time::now() - last_frame_timestamp)) as u16;
         return fps;
     }
+
+
 
     fn get_inputs(&mut self, rx: &Receiver<U2GMessage>) {
         let rx_message = rx.try_iter();
@@ -63,25 +82,11 @@ impl Game {
                 U2GMessage::NewPlayer(player) => {
                     self.map.players.insert(player.id.clone(), player);
                 }
-                U2GMessage::Event(event) => {
+                U2GMessage::PlayerEvent(player_id, event) => {
                     match event {
-        
-                        Event::KeyDown {
-                            keycode: Some(Keycode::Escape),
-                            ..
-                        } => {
-                            match self.status {
-                                Status::Running => self.status = Status::Paused,
-                                Status::Paused => self.status = Status::Running,
-        
-                                _ => {}
-                            }
+                        PlayerEvent::Moving(direction) => {
+                            self.moving(player_id, direction);
                         }
-
-                        Event::Quit {..} => {
-                            self.status = Status::Closed;
-                        }
-                        _ => {}
                     }
                 }
                 U2GMessage::Quit => {

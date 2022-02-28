@@ -17,7 +17,7 @@ use sdl2::ttf::Font;
 use std::sync::mpsc::{Sender, Receiver};
 use std::path::Path;
 
-use crate::helper::{G2UMessage, U2GMessage};
+use crate::helper::{G2UMessage, U2GMessage, PlayerEvent};
 use crate::settings;
 use crate::geometry;
 use geometry::{Position, rectangle::{Rectangle, Size, RectangleSize}, circle::Circle};
@@ -74,8 +74,8 @@ impl Ui {
 
         let map_view = MapView {
             position: Position {
-                x: settings::MAP_WIDTH as i32 / 2,
-                y: settings::MAP_HEIGHT as i32 / 2,
+                x: settings::MAP_WIDTH as f32 / 2.0,
+                y: settings::MAP_HEIGHT as f32 / 2.0,
             },
             size: Size::Rectangle(RectangleSize {
                 width: settings::WINDOW_WIDTH,
@@ -98,7 +98,7 @@ impl Ui {
         }
     }
 
-    fn inputs(&mut self, tx: &Sender<U2GMessage>) {
+    fn inputs(&mut self, tx: &Sender<U2GMessage>, game: &Game) {
         let mut events = vec![];
         for event in self.event_pump.poll_iter() {
             match event {
@@ -106,21 +106,49 @@ impl Ui {
                     win_event: WindowEvent::Resized(width, height),
                     ..
                 } => {
-                    self.map_view.size =   Size::Rectangle(RectangleSize {
+                    self.map_view.size = Size::Rectangle(RectangleSize {
                             width: width as u32,
                             height: height as u32,
                         }
                     );
                 }
 
-                sdl2::event::Event::Quit {
+                Event::MouseMotion {
+                    x, y,
+                    ..
+                } => {
+                    let mut player = match Player::get(self.player_id.clone(), game) {
+                        Some(player) => player,
+                        None => continue,
+                    };
+
+                    let mouse_pos = Position {
+                        x: x as f32,
+                        y: y as f32,
+                    };
+
+                    player.body_parts[0].center = self.map_view.map_position(player.body_parts[0].center);
+
+                    let angle = player.body_parts[0].angle_to(mouse_pos);
+
+                    let coordinates_to = Circle::angle_to_coordinates(angle);
+
+                    tx.send(
+                        U2GMessage::PlayerEvent(
+                            player.id.clone(),
+                            PlayerEvent::Moving(coordinates_to)
+                        )
+                    ).unwrap();
+
+                }
+
+                Event::Quit {
                     ..
                 } => {
                     tx.send(U2GMessage::Quit).unwrap();
                 }
                 _ => {
                     events.push(event.clone());
-                    tx.send(U2GMessage::Event(event)).unwrap();
                 }
             }
         }
@@ -153,7 +181,12 @@ impl Ui {
 
             let render::TextureQuery { width, height, .. } = texture.query();
         
-            let target = Rect::new(position.x, position.y + line_height as i32 * line_i as i32, width, height);
+            let target = Rect::new(
+                position.x as i32,
+                position.y as i32 + line_height as i32 * line_i as i32,
+                width,
+                height
+            );
             self.canvas.copy(&texture, None, Some(target)).unwrap();
 
         }
@@ -176,16 +209,16 @@ impl Ui {
             texture,
             Some(
                 Rect::new(
-                    sprite_rectangle.position.x,
-                    sprite_rectangle.position.y,
+                    sprite_rectangle.position.x as i32,
+                    sprite_rectangle.position.y as i32,
                     sprite_rectangle_size.width,
                     sprite_rectangle_size.height,
                 )
             ),
             Some(
                 Rect::new(
-                    target_corners.top_left.x,
-                    target_corners.top_left.y,
+                    target_corners.top_left.x as i32,
+                    target_corners.top_left.y as i32,
                     target_rectangle_size.width,
                     target_rectangle_size.height,
                 )
@@ -253,8 +286,8 @@ impl Ui {
                 &player.name,
                 Color::WHITE,
                 Position {
-                    x: mapped.center.x - body_part.radius as i32,
-                    y: mapped.center.y - body_part.radius as i32 - 25,
+                    x: mapped.center.x - body_part.radius as f32,
+                    y: mapped.center.y - body_part.radius as f32 - 25.0,
                 },
                 font,
                 texture_creator,
@@ -304,16 +337,16 @@ impl Ui {
 
         
         for message in rx.iter() {
-            self.inputs(tx);
-            
             let G2UMessage::StateUpdate(mut game) = message;
             let game = &mut game;
+            
+            self.inputs(tx, game);
 
             let player_pos = match Player::get(self.player_id.clone(), game) {
                 Some(player) => player.body_parts[0].center,
                 None => Position {
-                    x: settings::MAP_WIDTH as i32 / 2,
-                    y: settings::MAP_HEIGHT as i32 / 2,
+                    x: settings::MAP_WIDTH as f32 / 2.0,
+                    y: settings::MAP_HEIGHT as f32 / 2.0,
                 }
             };
 
@@ -381,8 +414,8 @@ impl Ui {
                 &info_text,
                 settings::DEBUG_COLOR,
                 Position {
-                    x: 10,
-                    y: 10,
+                    x: 10.0,
+                    y: 10.0,
                 }, 
                 debug_font,
                 texture_creator,
@@ -397,8 +430,8 @@ impl Ui {
             self.canvas.draw_rect(
                 sdl2::rect::Rect::from_center(
                     sdl2::rect::Point::from((
-                        pos.x,
-                        pos.y,
+                        pos.x as i32,
+                        pos.y as i32,
                     )),
                     size.width - 5,
                     size.height - 5,

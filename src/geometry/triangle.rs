@@ -7,7 +7,7 @@ pub struct Triangle {
 }
 
 impl Triangle {
-    pub fn get_hypotenuses_size(a: u32, b: u32) -> u32 {
-        return ((a.pow(2) + b.pow(2)) as f64).powf(0.5) as u32;
+    pub fn get_hypotenuses_size(a: f32, b: f32) -> f32 {
+        return (a.powf(2.0) + b.powf(2.0)).powf(0.5);
     }
 }
