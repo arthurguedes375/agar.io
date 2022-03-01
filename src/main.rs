@@ -19,7 +19,7 @@ fn main() {
     let (u2g_tx, u2g_rx) = mpsc::channel::<helper::U2GMessage>();
 
     std::thread::spawn(move || {
-        let mut window = ui::Ui::new("Arthur Guedes", UiSettings {
+        let mut window = ui::Ui::new("Arthur", UiSettings {
             title: String::from(settings::WINDOW_TITLE),
             width: settings::WINDOW_WIDTH,
             height: settings::WINDOW_HEIGHT,

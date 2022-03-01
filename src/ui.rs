@@ -6,8 +6,6 @@ use sdl2::image::{InitFlag};
 use sdl2::pixels::Color;
 use sdl2::render::Texture;
 
-use rand::{prelude::*, thread_rng};
-
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 
