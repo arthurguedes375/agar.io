@@ -8,11 +8,11 @@ pub type Fruit = Circle;
 
 impl Fruit {
 
-    pub fn new(rng: &mut rand::prelude::ThreadRng, width: u32, height: u32) -> Fruit {
+    pub fn new(rng: &mut rand::prelude::ThreadRng, map_width: u32, map_height: u32) -> Fruit {
         Fruit {
             center: Position {
-                x: rng.gen_range(0..width) as f32,
-                y: rng.gen_range(0..height) as f32,
+                x: rng.gen_range(0..map_width) as f32,
+                y: rng.gen_range(0..map_height) as f32,
             },
             radius: settings::FRUIT_RADIUS,
         }

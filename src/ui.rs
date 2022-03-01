@@ -6,6 +6,8 @@ use sdl2::image::{InitFlag};
 use sdl2::pixels::Color;
 use sdl2::render::Texture;
 
+use rand::{prelude::*, thread_rng};
+
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 
@@ -253,9 +255,22 @@ impl Ui {
 
     fn draw_fruits(&mut self, game: &mut game::Game) {
         let fruits = self.map_view.get_visible_fruits(&game.map);
-        
         for fruit in fruits {
-            self.circle(fruit, Color::CYAN, true);
+            let mapped_pos = self.map_view.map_position(fruit.center);
+            
+            let (r, g, b) = (
+                (fruit.center.x % 200.0) as u8,
+                (fruit.center.y % 200.0) as u8,
+                ((fruit.center.x * fruit.center.y) % 255.0) as u8,
+            );
+            self.circle(
+                Circle {
+                    center: mapped_pos,
+                    ..fruit
+                },
+                Color::RGB(r, g, b),
+                true
+            );
         }
     }
 
@@ -269,6 +284,21 @@ impl Ui {
             Some(player) => player,
             None => return,
         };
+        
+        let players_name_bytes = player.name.as_bytes();
+
+        let mut player_bytes_count = 0.0;
+        
+        for byte in players_name_bytes {
+            player_bytes_count += *byte as f32;
+        }
+
+        let (r, g, b) = (
+            (player_bytes_count % 255.0) as u8,
+            ((player_bytes_count * 1.5) % 255.0) as u8,
+            ((player_bytes_count * 0.5) % 255.0) as u8,
+        );
+
         let body_parts = player.body_parts.clone();
         for body_part in body_parts {
             let mapped = Circle {
@@ -277,7 +307,7 @@ impl Ui {
             };
             self.circle(
                 mapped,
-                Color::RGB(255, 77, 0),
+                Color::RGB(r, g, b),
                 true,
             );
             

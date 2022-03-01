@@ -53,10 +53,6 @@ impl MapView {
             .iter()
             .cloned()
             .filter(|fruit| self.is_visible(fruit.clone()))
-            .map(|fruit| Fruit {
-                center: self.map_position(fruit.center),
-                ..fruit
-            })
             .collect()
     }
     pub fn get_visible_players(&self, map: &Map) -> Vec<Player> {

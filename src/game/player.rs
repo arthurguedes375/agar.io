@@ -58,4 +58,15 @@ impl Player {
 
         return Some(player.clone());
     }
+
+    pub fn get_score(&self) -> u32 {
+        let mut score = 0;
+        let body_parts = self.body_parts.clone();
+
+        for body_part in body_parts {
+            score += body_part.radius;
+        }
+
+        return score / self.body_parts.len() as u32;
+    }
 }

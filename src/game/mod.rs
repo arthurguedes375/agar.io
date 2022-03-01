@@ -1,9 +1,11 @@
 use std::sync::mpsc::{Sender, Receiver};
 
+use rand::prelude::thread_rng;
+
 use crate::time;
 use crate::settings;
 use crate::helper::{G2UMessage, U2GMessage, PlayerEvent};
-use crate::geometry::{Position};
+use crate::geometry::{Position, rectangle::{Rectangle, RectangleSize, Size}};
 
 // Mods
 pub mod map;
@@ -56,15 +58,79 @@ impl Game {
         let players = self.map.players.values_mut();
 
         for player in players {
+            let player_score = player.clone().get_score();
             for body_part in player.body_parts.iter_mut() {
-                body_part.center.x += player.direction.x;
-                body_part.center.y += player.direction.y;
+                let delta = self.fps as f32 / (10.0 * player_score as f32);
+
+                let future_position = Game::future_position(
+                    body_part.center, Position {
+                        x: player.direction.x * delta,
+                        y: player.direction.y * delta,
+                    });
+                
+                let map_rect = Rectangle {
+                    position: Position {
+                        x: settings::MAP_WIDTH as f32 / 2.0,
+                        y: settings::MAP_HEIGHT as f32 / 2.0,
+                    },
+                    size: Size::Rectangle(RectangleSize {
+                        width: settings::MAP_WIDTH,
+                        height: settings::MAP_HEIGHT,
+                    }),
+                };
+
+                if map_rect.contains_position(future_position) {
+                    body_part.center = future_position;
+                }
             }
         }
     }
 
+    fn future_position(position: Position, speed: Position) -> Position {
+        Position {
+            x: position.x + speed.x,
+            y: position.y + speed.y,
+        }
+    } 
+
+    fn check_fruit_collision(&mut self) {
+        let mut fruits = self.map.fruits.clone();
+        let players = self.map.players.values_mut();
+
+        for player in players {
+            for body_part in player.body_parts.iter_mut() {
+                fruits = fruits.iter()
+                    .cloned()
+                    .map(|fruit| {
+                        if body_part.holds(fruit.center) {
+                            body_part.radius += fruit.radius / 10;
+                            let mut rng = thread_rng();
+                            return fruit::Fruit::new(&mut rng, settings::MAP_WIDTH, settings::MAP_HEIGHT);
+                        }
+
+                        return fruit;
+                    })
+                    .collect();
+            }
+        }
+
+        self.map.fruits = fruits;
+    }
+    fn check_player_collision(&mut self) {
+
+    }
+
+    fn check_object_collision(&mut self) {
+        self.check_fruit_collision();
+    }
+
+    fn check_collision(&mut self) {
+        self.check_object_collision();
+    }
+
     fn update(&mut self) {
         self.move_players();
+        self.check_collision();
     }
 
     pub fn get_fps(last_frame_timestamp: u128) -> u16 {
