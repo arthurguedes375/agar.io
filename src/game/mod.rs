@@ -58,7 +58,7 @@ impl Game {
         let players = self.map.players.values_mut();
 
         for player in players {
-            let player_score = player.clone().get_score();
+            let player_score = player.get_score();
             for body_part in player.body_parts.iter_mut() {
                 let delta = self.fps as f32 / (10.0 * player_score as f32);
 
@@ -137,8 +137,6 @@ impl Game {
         let fps = (1_000_000_000 / (time::now() - last_frame_timestamp)) as u16;
         return fps;
     }
-
-
 
     fn get_inputs(&mut self, rx: &Receiver<U2GMessage>) {
         let rx_message = rx.try_iter();
