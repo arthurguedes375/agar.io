@@ -33,5 +33,5 @@ pub const MAP_HEIGHT: u32 = 7000;
 pub const INITIAL_PLAYER_SCORE: u32 = 20;
 
 // Fruits
-pub const FRUITS: u16 = 6000;
+pub const FRUITS: u16 = 600;
 pub const FRUIT_RADIUS: u32 = 10;
