@@ -3,7 +3,7 @@ use sdl2::pixels::Color;
 use crate::ui::DebugOptions;
 
 // Window
-pub const WINDOW_TITLE: &str = "";
+pub const WINDOW_TITLE: &str = "Agar.io";
 pub const WINDOW_WIDTH: u32 = 600;
 pub const WINDOW_HEIGHT: u32 = 600;
 pub const MAX_FPS: u16 = 300;
@@ -33,5 +33,5 @@ pub const MAP_HEIGHT: u32 = 7000;
 pub const INITIAL_PLAYER_SCORE: u32 = 20;
 
 // Fruits
-pub const FRUITS: u16 = 2000;
+pub const FRUITS: u16 = 6000;
 pub const FRUIT_RADIUS: u32 = 10;
